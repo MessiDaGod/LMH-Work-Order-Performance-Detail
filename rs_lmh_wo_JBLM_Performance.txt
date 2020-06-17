@@ -27,57 +27,88 @@ insert into lmh_rpt_log (rptname,huser,asofdate,runtime,notes)
 		'rs_lmh_wo_jblm_performance'
 //end select
 
-//Select 
-select datepart(month,w.dtcall) #Month, 
-	datename(month, w.dtcall) Period, 
-	w.spriority Priority,
-	w.scategory Category,
-	w.ssubcat subcategory,
-	w.dtcall dtstart,
-	case when lmh.complete_goal = 0 then 'Yes' 
-		 when lmh.pending_reason not like 'Qualified%' then 'Yes'  
-		else 'No' end,
-	w.dtwcompl dtcompl,
-	u.scode uscode,
-	p.scode pscode,
-	w.hmy wonum,
-	w.sphone phone,
-	w.scallername caller,
-	case lmh.response_goal when 0 then 'Yes' else 'No' end respgoal,
-	min(d.dtactstart) workstart,
-	case when lmh.pending_reason like 'Qualified%' then '' else lmh.pending_reason end,
-	w.sbriefdesc issue,
-	w.sfulldesc,
-	w.stechnotes
-from mm2wo w
-	left outer join mm2wodet d on d.hwo = w.hmy
-	inner join property p on p.hmy = w.hproperty
-	left outer join unit u on u.hmy = w.hunit
-	inner join lmhwodata lmh on lmh.hmy = w.hmy
-where 1=1
-and w.spriority in ('01 - Emergency','02 - Urgent','03 - Routine')
-#conditions#
-group by datepart(month,w.dtcall) , 
-	datename(month, w.dtcall) , 
-	w.spriority ,
-	w.scategory,
-	w.ssubcat,
-	w.dtcall ,
-	case when lmh.complete_goal = 0 then 'Yes' 
-		 when lmh.pending_reason not like 'Qualified%' then 'Yes'  
-		else 'No' end,
-	w.dtwcompl ,
-	u.scode ,
-	p.scode,
-	w.hmy ,
-	w.sphone,
-	w.scallername ,
-	case lmh.response_goal when 0 then 'Yes' else 'No' end ,
-	case when lmh.pending_reason like 'Qualified%' then '' else lmh.pending_reason end,
-	w.sbriefdesc ,
-	w.sfulldesc,
-	w.stechnotes
-Order by 1,2,4
+//Select
+
+SELECT datepart(month, w.dtcall) #Month
+	,datename(month, w.dtcall) Period
+	,w.spriority Priority
+	,w.scategory Category
+	,w.ssubcat subcategory
+	,w.dtcall dtstart
+	,CASE 
+		WHEN lmh.complete_goal = 0
+			THEN 'Yes'
+		WHEN lmh.pending_reason NOT LIKE 'Qualified%'
+			THEN 'Yes'
+		ELSE 'No'
+		END
+	,w.dtwcompl dtcompl
+	,u.scode uscode
+	,p.scode pscode
+	,w.hmy wonum
+	,w.sphone phone
+	,w.scallername CALLER
+	,CASE lmh.response_goal
+		WHEN 0
+			THEN 'Yes'
+		ELSE 'No'
+		END respgoal
+	,min(d.dtactstart) workstart
+	,CASE 
+		WHEN lmh.pending_reason LIKE 'Qualified%'
+			THEN ''
+		ELSE lmh.pending_reason
+		END
+	,w.sbriefdesc issue
+	,w.sfulldesc
+	,w.stechnotes
+FROM mm2wo w
+LEFT OUTER JOIN mm2wodet d ON d.hwo = w.hmy
+INNER JOIN property p ON p.hmy = w.hproperty
+LEFT OUTER JOIN unit u ON u.hmy = w.hunit
+INNER JOIN lmhwodata lmh ON lmh.hmy = w.hmy
+WHERE 1 = 1
+	AND w.spriority IN (
+		'01 - Emergency'
+		,'02 - Urgent'
+		,'03 - Routine'
+		) #conditions#
+GROUP BY datepart(month, w.dtcall)
+	,datename(month, w.dtcall)
+	,w.spriority
+	,w.scategory
+	,w.ssubcat
+	,w.dtcall
+	,CASE 
+		WHEN lmh.complete_goal = 0
+			THEN 'Yes'
+		WHEN lmh.pending_reason NOT LIKE 'Qualified%'
+			THEN 'Yes'
+		ELSE 'No'
+		END
+	,w.dtwcompl
+	,u.scode
+	,p.scode
+	,w.hmy
+	,w.sphone
+	,w.scallername
+	,CASE lmh.response_goal
+		WHEN 0
+			THEN 'Yes'
+		ELSE 'No'
+		END
+	,CASE 
+		WHEN lmh.pending_reason LIKE 'Qualified%'
+			THEN ''
+		ELSE lmh.pending_reason
+		END
+	,w.sbriefdesc
+	,w.sfulldesc
+	,w.stechnotes
+ORDER BY 1
+	,2
+	,4
+
 //end select
   
 //Columns
