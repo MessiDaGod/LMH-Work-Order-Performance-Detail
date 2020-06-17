@@ -1,37 +1,61 @@
 /*
-FOR Emergency work orders 30 minute to respond during the workday, 1 hour after hours and weekends to RESPOND, NO COMPLETE
-for routine they have to respond and complete within 24 hours or the end of the next business day WHICHEVER IS GREATER (response and complete)
-they want the first contact time
-NO URGENT INCLUDED
+ * ** For Emergency **
+ -- work orders 30 minute to respond during the workday, 1 hour after hours and weekends to RESPOND, NO COMPLETE
+ ** For Routine **
+ -- they have to respond and complete within 24 hours or the end of the next business day WHICHEVER IS GREATER 
+ -- response and complete
+ -- they want the first contact time
+ ** NO URGENT **
 */
 //SELECT NO CRYSTAL 
 
 IF OBJECT_ID('lmhwohistorytemp') IS NOT NULL
 	DROP TABLE lmhwohistorytemp
-		
+
 //END SELECT 
 
 //SELECT NO CRYSTAL 
-SELECT 1 AS 'KeyColumn'
-	,w.dtcall
-	,d.dtActFinish
-	,d.dtActStart
-	,w.dtwcompl
-	,w.spriority
-	,w.scategory Category
-	,w.ssubcat subcategory
-	,FirstContact.tstamp
-	,'#@@OutputType#' AS 'OutputType'
-INTO lmhwohistorytemp
-FROM mm2wo w
-INNER JOIN property p ON p.hmy = w.hproperty
-INNER JOIN lmhwodata lmh ON lmh.hmy = w.hmy
-LEFT JOIN mm2wodet d ON d.hwo = w.hmy
-LEFT JOIN unit u ON u.hmy = w.hunit
-WHERE (
-		w.spriority LIKE '%Emergency%'
-		OR w.spriority LIKE '%Routine%'
-		) #Conditions#
+
+SELECT wo.hMy Id
+	,wo.hProperty PropertyId
+	,p.scode PropertyCode
+	,u.scode UnitCode
+	,wo.sPriority Priority
+	,wo.sbriefdesc Description
+	,a.subGroup1 SubGroup1
+	,isnull(wo.sPriority, '') wogrp
+	,isnull(wo.sPriority, '') ActualgrpCode
+	,wo.dtcall CallDate
+	,ISNULL(MIN(wod.dtActStart), wo.dtWCompl) AS ResponseDate
+	,ISNULL(MAX(wod.dtActFinish), wo.dtWCompl) AS CompletionDate
+FROM mm2wo wo
+LEFT JOIN MM2WODET wod ON wod.hwo = wo.hmy
+INNER JOIN PROPERTY p ON (wo.hproperty = p.hmy)
+LEFT JOIN ATTRIBUTES a ON (a.HPROP = p.hmy)
+LEFT JOIN unit u ON (u.hmy = wo.hunit)
+WHERE 1 = 1
+	AND wo.hproperty IN (
+		SELECT lp.hProperty
+		FROM property p1
+		INNER JOIN listprop2 lp ON (p1.HMY = lp.hPropList)
+		WHERE scode IN ('.resprop')
+		)
+	AND wo.sStatus = 'Work Completed'
+	AND CONVERT(DATETIME, CONVERT(CHAR, wo.dtwcompl, 101), 101) >= convert(DATETIME, '01/01/2007', 101)
+	AND CONVERT(DATETIME, CONVERT(CHAR, wo.dtwcompl, 101), 101) <= convert(DATETIME, '02/28/2007', 101)
+GROUP BY wo.hmy
+	,wo.dtwcompl
+	,wo.HPROPERTY
+	,wo.DTCALL
+	,p.SCODE
+	,p.saddr1
+	,u.SCODE
+	,wo.SPRIORITY
+	,wo.sbriefdesc
+	,a.subgroup1
+	,wo.dtWCompl
+	,wo.sPriority
+
 
 //END SELECT 
 
