@@ -1,22 +1,3 @@
-/*
- * ** For Emergency **
- -DONE- work orders 30 minute to respond during the workday, 1 hour after hours and weekends to RESPOND, NO COMPLETE
- ** For Routine **
- -DONE- they have to respond and complete within 24 hours 
- or 
- 
- > the end of the next business day WHICHEVER IS GREATER 
- -- response and complete
- -- they want the first contact time
- ** NO URGENT **
-*/
-//SELECT NO CRYSTAL 
-
-IF OBJECT_ID('lmhwohistorytemp') IS NOT NULL
-	DROP TABLE lmhwohistorytemp
-
-//END SELECT 
-
 //SELECT NO CRYSTAL 
 SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
 
@@ -131,7 +112,7 @@ AS (
 		,DATENAME(MONTH, wo.dtcall)
 	)
 SELECT *
-INTO lmhwohistorytemp
+INTO [#@@GUID#TempLMH_WOPerf]
 FROM CTE
 ORDER BY wonum
 	,rownum
@@ -153,7 +134,7 @@ AS (
 			ELSE 0
 			END orderby
 		,*
-	FROM lmhwohistorytemp
+	FROM [#@@GUID#TempLMH_WOPerf]
 	WHERE historystatus = 'First Contact'
 	)
 SELECT rownum
@@ -211,13 +192,13 @@ SELECT rownum
 			THEN 'Yes'
 		ELSE CASE 
 				WHEN [Priority] LIKE '%Routine%'
-					/* Completed it less than 14 hours */
+					
 					AND (
-						(
+						(/* Completed in less than 24 hours or before end of next business day */
 							DATEADD(DAY, 1, dtcall) <= CompletionDate
 							OR DATEDIFF(HOUR, dtcall, CompletionDate) <= 24
 							)
-						AND (
+						AND (/* Contacted in less than 24 hours OR before end of business next day */
 							DATEADD(DAY, 1, dtcall) <= HistoryDate
 							OR DATEDIFF(HOUR, dtcall, HistoryDate) <= 24
 							)
@@ -232,3 +213,10 @@ ORDER BY wonum
 	,rownum
 
 //END SELECT
+
+//SELECT NO CRYSTAL AFTER
+
+IF OBJECT_ID('[#@@GUID#TempLMH_WOPerf]') IS NOT NULL
+	DROP TABLE [#@@GUID#TempLMH_WOPerf]
+
+//END SELECT 
