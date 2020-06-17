@@ -56,7 +56,6 @@ GROUP BY wo.hmy
 	,wo.dtWCompl
 	,wo.sPriority
 
-
 //END SELECT 
 
 //SELECT Detail 
