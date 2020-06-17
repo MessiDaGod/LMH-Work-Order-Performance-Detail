@@ -14,15 +14,19 @@ IF OBJECT_ID('lmhwohistorytemp') IS NOT NULL
 
 //END SELECT 
 
-//SELECT Detail
+//SELECT NO CRYSTAL 
+
 SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+
 WITH CTE
 AS (
 	SELECT 1 AS 'KeyColumn'
 		,DENSE_RANK() OVER (
-			PARTITION BY wo.hmy ORDER BY wo.hmy, fc.tstamp
+			PARTITION BY wo.hmy ORDER BY wo.hmy
+				,fc.tstamp
 			) rownum
 		,wo.hmy wonum
+		,p.scode PropCode
 		,wh.sStatus HistoryStatus
 		,FORMAT(wo.dtCall, 'M/dd/yyyy hh:mm tt') dtCall
 		,FORMAT(FC.tstamp, 'M/dd/yyyy hh:mm tt') HistoryDate
@@ -31,36 +35,6 @@ AS (
 		,ISNULL(MAX(wod.dtActFinish), wo.dtWCompl) AS CompletionDate
 		,DATENAME(WEEKDAY, wo.dtcall) AS DayOfCall
 		,isnull(wo.sPriority, '') Priority
-		,CASE 
-			WHEN wo.spriority LIKE '%Emergency%'
-				AND (
-					(
-						DATENAME(WEEKDAY, wo.dtCall) = 'Saturday'
-						OR DATENAME(WEEKDAY, wo.dtCall) = 'Sunday'
-						)
-					OR (
-						(
-							DATEPART(HOUR, wo.dtcall) BETWEEN 19
-								AND 23
-							OR DATEPART(HOUR, wo.dtcall) BETWEEN 0
-								AND 7
-							)
-						)
-					)
-				AND DATEDIFF(MINUTE, wo.dtcall, ISNULL(MIN(wod.dtActStart), wo.dtWCompl)) <= 60
-				THEN 'Yes (1 Hour)'
-			WHEN wo.spriority LIKE '%Emergency%'
-				AND DATEDIFF(MINUTE, wo.dtcall, ISNULL(MIN(wod.dtActStart), wo.dtWCompl)) <= 30
-				THEN 'Yes (30 Mins)'
-			ELSE CASE 
-					WHEN wo.spriority LIKE '%Routine%'
-						AND (
-							DATEADD(DAY, 1, CAST(wo.dtcall AS DATE)) <= ISNULL(MIN(wod.dtActStart), wo.dtWCompl)
-							OR DATEDIFF(HOUR, wo.dtcall, ISNULL(MIN(wod.dtActStart), wo.dtWCompl)) <= 24
-							)
-						THEN 'Yes'
-					END
-			END AS 'CombineGoal'
 		,CASE 
 			WHEN isnull(rtrim(wo.sStatus), 'NONE') IN (
 					'NONE'
@@ -78,6 +52,7 @@ AS (
 				THEN 'Yes'
 			ELSE 'No'
 			END JerrodGoal
+		,wh.hmy WOHistoryId
 	FROM mm2wO wo
 	LEFT JOIN lmhwodata lmh ON lmh.hmy = wo.hmy
 	LEFT JOIN mm2wodet wod ON wo.hmy = wod.hwo
@@ -89,7 +64,7 @@ AS (
 	LEFT JOIN mmasset asset ON (wo.hasset = asset.hmy)
 	LEFT JOIN person emp ON (wod.hperson = emp.hmy)
 	LEFT JOIN MM2EMPLRATES skill ON (wod.hrate = skill.hmy)
-	INNER JOIN WOHistory wh ON wh.hWO = WO.HMY
+	LEFT JOIN WOHistory wh ON wh.hWO = WO.HMY
 	INNER JOIN (
 		SELECT MIN(wh.hmy) whHmy
 			,wh.hwo
@@ -106,17 +81,10 @@ AS (
 	WHERE (
 			wo.SPRIORITY LIKE '%Emergency%'
 			OR wo.SPRIORITY LIKE '%Routine%'
-			)
-		AND p.hmy IN (
-			SELECT hProperty
-			FROM listprop2
-			WHERE hPropList IN (1017)
-			)
-		AND wo.dtcall BETWEEN '2020-05-01'
-			AND dateadd(day, 1, '2020-05-31')
-	GROUP BY isnull(wo.sPriority, '')
+			) #CONDITIONS#
+	GROUP BY ISNULL(wo.sPriority, '')
 		,CASE 
-			WHEN isnull(rtrim(wo.sStatus), 'NONE') IN (
+			WHEN ISNULL(RTRIM(wo.sStatus), 'NONE') IN (
 					'NONE'
 					,'NULL'
 					,''
@@ -134,6 +102,8 @@ AS (
 		,lmh.complete_goal
 		,lmh.pending_reason
 		,wh.sStatus
+		,p.scode
+		,wh.hmy
 	)
 SELECT wonum
 	,rownum
@@ -145,9 +115,12 @@ SELECT wonum
 	,CompletionDate
 	,DayOfCall
 	,Priority
-	,CombineGoal
+	,PropCode
+	,STATUS
+	,WOHistoryId
+	,JerrodGoal
+INTO lmhwohistorytemp
 FROM CTE
-WHERE HistoryStatus IS NOT NULL
 GROUP BY wonum
 	,rownum
 	,dtCall
@@ -157,16 +130,69 @@ GROUP BY wonum
 	,CompletionDate
 	,DayOfCall
 	,Priority
-	,CombineGoal
 	,HistoryStatus
-ORDER BY wonum, rownum
-	--WHERE STATUS IN ('Pending / Vendor','Pending / Parts', 'Pending / Appointment', 'Pending / Continuous Work')
+	,PropCode
+	,STATUS
+	,WOHistoryId
+	,JerrodGoal
+ORDER BY wonum
+	,rownum
+
+/*WHERE STATUS IN ('Pending / Vendor','Pending / Parts', 'Pending / Appointment', 'Pending / Continuous Work')*/
 
 //END SELECT 
 
--- //SELECT Detail 
+//SELECT Detail 
 
--- SELECT *
--- FROM lmhwohistorytemp
+WITH CTE
+AS (
+	SELECT CASE 
+			WHEN DENSE_RANK() OVER (
+					PARTITION BY wonum ORDER BY wonum
+						,historydate
+					) = 1
+				THEN 1
+			ELSE 0
+			END orderby
+		,*
+	FROM lmhwohistorytemp
+	WHERE historystatus = 'First Contact'
+	)
+SELECT *
+	,CASE 
+		WHEN [Priority] LIKE '%Emergency%'
+			AND (
+				(
+					DayOfCall = 'Saturday'
+					OR DayOfCall = 'Sunday'
+					)
+				OR (
+					(
+						DATEPART(HOUR, dtcall) BETWEEN 19
+							AND 23
+						OR DATEPART(HOUR, dtcall) BETWEEN 0
+							AND 7
+						)
+					)
+				)
+			AND DATEDIFF(MINUTE, dtcall, HistoryDate) <= 60
+			THEN 'Yes'
+		WHEN [Priority] LIKE '%Emergency%'
+			AND DATEDIFF(MINUTE, dtcall, HistoryDate) <= 30
+			THEN 'Yes'
+		ELSE CASE 
+				WHEN [Priority] LIKE '%Routine%'
+					AND (
+						DATEADD(DAY, 1, CAST(dtcall AS DATE)) <= HistoryDate
+						OR DATEDIFF(HOUR, dtcall, HistoryDate) <= 24
+						)
+					THEN 'Yes'
+				ELSE 'No'
+				END
+		END AS 'CombineGoal'
+FROM CTE
+WHERE orderby = 1
+ORDER BY wonum
+	,rownum
 
--- //END SELECT
+//END SELECT
