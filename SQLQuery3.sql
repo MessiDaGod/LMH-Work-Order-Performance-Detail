@@ -1,31 +1,14 @@
-/*
- * ** For Emergency **
- -- work orders 30 minute to respond during the workday, 1 hour after hours and weekends to RESPOND, NO COMPLETE
- ** For Routine **
- -- they have to respond and complete within 24 hours or the end of the next business day WHICHEVER IS GREATER 
- -- response and complete
- -- they want the first contact time
- ** NO URGENT **
-*/
-//SELECT NO CRYSTAL 
-
-IF OBJECT_ID('lmhwohistorytemp') IS NOT NULL
-	DROP TABLE lmhwohistorytemp
-
-//END SELECT 
-
-//SELECT Detail
-SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
 WITH CTE
 AS (
 	SELECT 1 AS 'KeyColumn'
-		,DENSE_RANK() OVER (
-			PARTITION BY wo.hmy ORDER BY wo.hmy, fc.tstamp
+		,ROW_NUMBER() OVER (
+			PARTITION BY wo.hmy
+			,wo.dtcall ORDER BY fc.tstamp DESC
 			) rownum
 		,wo.hmy wonum
 		,wh.sStatus HistoryStatus
 		,FORMAT(wo.dtCall, 'M/dd/yyyy hh:mm tt') dtCall
-		,FORMAT(FC.tstamp, 'M/dd/yyyy hh:mm tt') HistoryDate
+		,FORMAT(FC.tstamp, 'M/dd/yyyy hh:mm tt') FirstContactTime
 		,FORMAT(ISNULL(MIN(wod.dtActStart), wo.dtWCompl), 'M/dd/yyyy hh:mm tt') workstart
 		,ISNULL(MIN(wod.dtActStart), wo.dtWCompl) AS ResponseDate
 		,ISNULL(MAX(wod.dtActFinish), wo.dtWCompl) AS CompletionDate
@@ -98,6 +81,7 @@ AS (
 			,isnull(pu.uName, 'DBO') UserName
 		FROM WOHistory wh
 		LEFT JOIN pmuser pu ON pu.hmy = wh.hUserModifiedBy
+		--WHERE wh.sStatus = 'First Contact'
 		GROUP BY wh.sStatus
 			,isnull(pu.uName, 'DBO')
 			,wh.hWO
@@ -134,39 +118,39 @@ AS (
 		,lmh.complete_goal
 		,lmh.pending_reason
 		,wh.sStatus
+		/*ORDER BY CASE 
+		WHEN isnull(rtrim(wo.sStatus), 'NONE') IN (
+				'NONE'
+				,'NULL'
+				,''
+				)
+			THEN 'NONE'
+		ELSE wo.sStatus
+		END
+	,isnull(wo.sPriority, '')*/
 	)
-SELECT wonum
+SELECT DISTINCT wonum
 	,rownum
-	,HistoryStatus
 	,dtCall
-	,HistoryDate
+	,FirstContactTime
 	,workstart
 	,ResponseDate
 	,CompletionDate
 	,DayOfCall
 	,Priority
 	,CombineGoal
+	,HistoryStatus
 FROM CTE
 WHERE HistoryStatus IS NOT NULL
-GROUP BY wonum
-	,rownum
-	,dtCall
-	,HistoryDate
-	,workstart
-	,ResponseDate
-	,CompletionDate
-	,DayOfCall
-	,Priority
-	,CombineGoal
-	,HistoryStatus
-ORDER BY wonum, rownum
+	--WHERE WONUM = 10279313
+	--GROUP BY wonum
+	--	,dtCall
+	--	,FirstContactTime
+	--	,workstart
+	--	,ResponseDate
+	--	,CompletionDate
+	--	,DayOfCall
+	--	,Priority
+	--	,CombineGoal
+	--	,STATUS
 	--WHERE STATUS IN ('Pending / Vendor','Pending / Parts', 'Pending / Appointment', 'Pending / Continuous Work')
-
-//END SELECT 
-
--- //SELECT Detail 
-
--- SELECT *
--- FROM lmhwohistorytemp
-
--- //END SELECT
