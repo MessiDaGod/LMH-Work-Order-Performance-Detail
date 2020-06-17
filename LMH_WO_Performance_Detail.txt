@@ -1,8 +1,11 @@
 /*
  * ** For Emergency **
- -- work orders 30 minute to respond during the workday, 1 hour after hours and weekends to RESPOND, NO COMPLETE
+ -DONE- work orders 30 minute to respond during the workday, 1 hour after hours and weekends to RESPOND, NO COMPLETE
  ** For Routine **
- -- they have to respond and complete within 24 hours or the end of the next business day WHICHEVER IS GREATER 
+ -DONE- they have to respond and complete within 24 hours 
+ or 
+ 
+ > the end of the next business day WHICHEVER IS GREATER 
  -- response and complete
  -- they want the first contact time
  ** NO URGENT **
@@ -27,11 +30,11 @@ AS (
 		,wo.hmy wonum
 		,p.scode PropCode
 		,wh.sStatus AS 'HistoryStatus'
-		,FORMAT(wo.dtCall, 'M/dd/yyyy hh:mm tt') dtCall
-		,FORMAT(FC.tstamp, 'M/dd/yyyy hh:mm tt') AS 'HistoryDate'
-		,FORMAT(ISNULL(MIN(wod.dtActStart), wo.dtWCompl), 'M/dd/yyyy hh:mm tt') workstart
-		,FORMAT(ISNULL(MIN(wod.dtActStart), wo.dtWCompl), 'M/dd/yyyy hh:mm tt') ResponseDate
-		,FORMAT(ISNULL(MAX(wod.dtActFinish), wo.dtWCompl), 'M/dd/yyyy hh:mm tt') CompletionDate
+		,wo.dtCall
+		,FC.tstamp AS 'HistoryDate'
+		,ISNULL(MIN(wod.dtActStart), wo.dtWCompl) workstart
+		,ISNULL(MIN(wod.dtActStart), wo.dtWCompl) ResponseDate
+		,ISNULL(MAX(wod.dtActFinish), wo.dtWCompl) AS CompletionDate
 		,DATENAME(WEEKDAY, wo.dtcall) AS 'DayOfCall'
 		,isnull(wo.sPriority, '') Priority
 		,CASE 
@@ -55,7 +58,6 @@ AS (
 		,wo.spriority
 		,wo.scategory Category
 		,wo.ssubcat subcategory
-		,FORMAT(wo.dtwcompl, 'M/dd/yyyy hh:mm tt') AS 'dtcompl'
 		,dbo.FormatPhoneNumber(wo.sphone) AS 'phone'
 		,wo.sbriefdesc
 		,wo.sfulldesc
@@ -119,7 +121,6 @@ AS (
 		,wo.spriority
 		,wo.scategory
 		,wo.ssubcat
-		,FORMAT(wo.dtwcompl, 'M/dd/yyyy hh:mm tt')
 		,dbo.FormatPhoneNumber(wo.sphone)
 		,wo.sbriefdesc
 		,wo.sfulldesc
@@ -139,7 +140,8 @@ ORDER BY wonum
 
 //END SELECT 
 
-//SELECT Detail 
+//SELECT Detail
+
 WITH CTE
 AS (
 	SELECT CASE 
@@ -154,17 +156,15 @@ AS (
 	FROM lmhwohistorytemp
 	WHERE historystatus = 'First Contact'
 	)
-SELECT *
-/*KeyColumn
-	,rownum
-	,wonum
+SELECT rownum
+	,CONVERT(VARCHAR, wonum) wonum
 	,PropCode
 	,HistoryStatus
-	,dtCall
-	,HistoryDate
-	,workstart
-	,ResponseDate
-	,CompletionDate
+	,FORMAT(dtCall, 'M/dd/yyyy hh:mm tt') AS 'dtCall'
+	,FORMAT(HistoryDate, 'M/dd/yyyy hh:mm tt') AS 'HistoryDate'
+	,FORMAT(workstart, 'M/dd/yyyy hh:mm tt') AS 'workstart'
+	,FORMAT(ResponseDate, 'M/dd/yyyy hh:mm tt') AS 'ResponseDate'
+	,FORMAT(CompletionDate, 'M/dd/yyyy hh:mm tt') AS 'CompletionDate'
 	,DayOfCall
 	,Priority
 	,[STATUS]
@@ -174,7 +174,6 @@ SELECT *
 	,spriority
 	,Category
 	,subcategory
-	,dtcompl
 	,phone
 	,sbriefdesc
 	,sfulldesc
@@ -183,7 +182,12 @@ SELECT *
 	,uscode
 	,pscode
 	,[Month]
-	,OutputType*/
+	,OutputType
+	,CASE 
+		WHEN [STATUS] LIKE '%Pending%'
+			THEN REPLACE([STATUS], 'Pending / ', '')
+		ELSE NULL
+		END AS 'pendingReason'
 	,CASE 
 		WHEN [Priority] LIKE '%Emergency%'
 			AND (
@@ -207,15 +211,22 @@ SELECT *
 			THEN 'Yes'
 		ELSE CASE 
 				WHEN [Priority] LIKE '%Routine%'
+					/* Completed it less than 14 hours */
 					AND (
-						DATEADD(DAY, 1, CAST(dtcall AS DATE)) <= HistoryDate
-						OR DATEDIFF(HOUR, dtcall, HistoryDate) <= 24
+						(
+							DATEADD(DAY, 1, dtcall) <= CompletionDate
+							OR DATEDIFF(HOUR, dtcall, CompletionDate) <= 24
+							)
+						AND (
+							DATEADD(DAY, 1, dtcall) <= HistoryDate
+							OR DATEDIFF(HOUR, dtcall, HistoryDate) <= 24
+							)
 						)
 					THEN 'Yes'
 				ELSE 'No'
 				END
 		END AS 'CombineGoal'
-FROM CTE 
+FROM CTE
 WHERE orderby = 1
 ORDER BY wonum
 	,rownum
