@@ -15,7 +15,6 @@ IF OBJECT_ID('lmhwohistorytemp') IS NOT NULL
 //END SELECT 
 
 //SELECT NO CRYSTAL 
-
 SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
 
 WITH CTE
@@ -27,13 +26,13 @@ AS (
 			) rownum
 		,wo.hmy wonum
 		,p.scode PropCode
-		,wh.sStatus HistoryStatus
+		,wh.sStatus AS 'HistoryStatus'
 		,FORMAT(wo.dtCall, 'M/dd/yyyy hh:mm tt') dtCall
-		,FORMAT(FC.tstamp, 'M/dd/yyyy hh:mm tt') HistoryDate
+		,FORMAT(FC.tstamp, 'M/dd/yyyy hh:mm tt') AS 'HistoryDate'
 		,FORMAT(ISNULL(MIN(wod.dtActStart), wo.dtWCompl), 'M/dd/yyyy hh:mm tt') workstart
-		,ISNULL(MIN(wod.dtActStart), wo.dtWCompl) AS ResponseDate
-		,ISNULL(MAX(wod.dtActFinish), wo.dtWCompl) AS CompletionDate
-		,DATENAME(WEEKDAY, wo.dtcall) AS DayOfCall
+		,FORMAT(ISNULL(MIN(wod.dtActStart), wo.dtWCompl), 'M/dd/yyyy hh:mm tt') ResponseDate
+		,FORMAT(ISNULL(MAX(wod.dtActFinish), wo.dtWCompl), 'M/dd/yyyy hh:mm tt') CompletionDate
+		,DATENAME(WEEKDAY, wo.dtcall) AS 'DayOfCall'
 		,isnull(wo.sPriority, '') Priority
 		,CASE 
 			WHEN isnull(rtrim(wo.sStatus), 'NONE') IN (
@@ -53,6 +52,19 @@ AS (
 			ELSE 'No'
 			END JerrodGoal
 		,wh.hmy WOHistoryId
+		,wo.spriority
+		,wo.scategory Category
+		,wo.ssubcat subcategory
+		,FORMAT(wo.dtwcompl, 'M/dd/yyyy hh:mm tt') AS 'dtcompl'
+		,dbo.FormatPhoneNumber(wo.sphone) AS 'phone'
+		,wo.sbriefdesc
+		,wo.sfulldesc
+		,wo.stechnotes
+		,wo.scallername
+		,u.scode uscode
+		,p.scode pscode
+		,DATENAME(MONTH, wo.dtcall) AS 'Month'
+		,'#@@OutputType#' AS 'OutputType'
 	FROM mm2wO wo
 	LEFT JOIN lmhwodata lmh ON lmh.hmy = wo.hmy
 	LEFT JOIN mm2wodet wod ON wo.hmy = wod.hwo
@@ -104,37 +116,22 @@ AS (
 		,wh.sStatus
 		,p.scode
 		,wh.hmy
+		,wo.spriority
+		,wo.scategory
+		,wo.ssubcat
+		,FORMAT(wo.dtwcompl, 'M/dd/yyyy hh:mm tt')
+		,dbo.FormatPhoneNumber(wo.sphone)
+		,wo.sbriefdesc
+		,wo.sfulldesc
+		,wo.stechnotes
+		,wo.scallername
+		,u.scode
+		,p.scode
+		,DATENAME(MONTH, wo.dtcall)
 	)
-SELECT wonum
-	,rownum
-	,HistoryStatus
-	,dtCall
-	,HistoryDate
-	,workstart
-	,ResponseDate
-	,CompletionDate
-	,DayOfCall
-	,Priority
-	,PropCode
-	,STATUS
-	,WOHistoryId
-	,JerrodGoal
+SELECT *
 INTO lmhwohistorytemp
 FROM CTE
-GROUP BY wonum
-	,rownum
-	,dtCall
-	,HistoryDate
-	,workstart
-	,ResponseDate
-	,CompletionDate
-	,DayOfCall
-	,Priority
-	,HistoryStatus
-	,PropCode
-	,STATUS
-	,WOHistoryId
-	,JerrodGoal
 ORDER BY wonum
 	,rownum
 
@@ -143,7 +140,6 @@ ORDER BY wonum
 //END SELECT 
 
 //SELECT Detail 
-
 WITH CTE
 AS (
 	SELECT CASE 
@@ -159,6 +155,35 @@ AS (
 	WHERE historystatus = 'First Contact'
 	)
 SELECT *
+/*KeyColumn
+	,rownum
+	,wonum
+	,PropCode
+	,HistoryStatus
+	,dtCall
+	,HistoryDate
+	,workstart
+	,ResponseDate
+	,CompletionDate
+	,DayOfCall
+	,Priority
+	,[STATUS]
+	,[Count]
+	,JerrodGoal
+	,WOHistoryId
+	,spriority
+	,Category
+	,subcategory
+	,dtcompl
+	,phone
+	,sbriefdesc
+	,sfulldesc
+	,stechnotes
+	,scallername
+	,uscode
+	,pscode
+	,[Month]
+	,OutputType*/
 	,CASE 
 		WHEN [Priority] LIKE '%Emergency%'
 			AND (
@@ -190,7 +215,7 @@ SELECT *
 				ELSE 'No'
 				END
 		END AS 'CombineGoal'
-FROM CTE
+FROM CTE 
 WHERE orderby = 1
 ORDER BY wonum
 	,rownum
