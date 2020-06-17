@@ -1,0 +1,8 @@
+//SELECT Detail 
+
+
+
+//END SELECT
+--FOR Emergency work orders 30 minutes to respond
+--for routine they have to respond and complete within 24 hours or the end of the next business day
+--they want the first contact time

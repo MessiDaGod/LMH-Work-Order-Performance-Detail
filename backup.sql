@@ -1,0 +1,199 @@
+
+
+
+-- SELECT wo.hMy Id
+-- 	,wo.hProperty PropertyId
+-- 	,p.scode PropertyCode
+-- 	,u.scode UnitCode
+-- 	,wo.sPriority Priority
+-- 	,wo.sbriefdesc Description
+-- 	,a.subGroup1 SubGroup1
+-- 	,p.saddr1 + '(' + rtrim(p.scode) + ')' wogrp
+-- 	,p.scode ActualgrpCode
+-- 	,wo.dtcall CallDate
+-- 	,ISNULL(MIN(wod.dtActStart), wo.dtWCompl) AS ResponseDate
+-- 	,ISNULL(MAX(wod.dtActFinish), wo.dtWCompl) AS CompletionDate
+-- FROM mm2wo wo
+-- LEFT JOIN MM2WODET wod ON wod.hwo = wo.hmy
+-- INNER JOIN PROPERTY p ON (wo.hproperty = p.hmy)
+-- LEFT JOIN ATTRIBUTES a ON (a.HPROP = p.hmy)
+-- LEFT JOIN unit u ON (u.hmy = wo.hunit)
+-- INNER JOIN ListProp2 lp ON (p.hmy = lp.hProperty)
+-- INNER JOIN WOPerformanceStandard wps ON (
+-- 		lp.hPropList = wps.hProperty
+-- 		AND wo.SPRIORITY = wps.sPriority
+-- 		)
+-- WHERE upper(isnull(wo.sPriority, '')) IN ('01 - EMERGENCY')
+-- GROUP BY wo.hmy
+-- 	,wo.dtwcompl
+-- 	,wo.HPROPERTY
+-- 	,wo.DTCALL
+-- 	,p.SCODE
+-- 	,p.saddr1
+-- 	,u.SCODE
+-- 	,wo.SPRIORITY
+-- 	,wo.sbriefdesc
+-- 	,a.subgroup1
+-- 	,wo.dtWCompl
+-- 	,p.scode
+-- 	,p.saddr1
+
+-- SELECT WO.HMY ID
+-- 	,WO.HPROPERTY PropertyID
+-- 	,P.SADDR1 PropertyName
+-- 	,WO.HUNIT UnitID
+-- 	,U.SCODE UnitCode
+-- 	,ISNULL(WO.HVENDOR, 0) VendorID
+-- 	,ISNULL(V.ULASTNAME, '') VendorName
+-- 	,ISNULL(WO.HASSET, 0) AssetID
+-- 	,ISNULL(A.SNAME, '') AssetName
+-- 	,WO.SBRIEFDESC BriefDesc
+-- 	,WO.SPRIORITY [Priority]
+-- 	,WO.SCATEGORY Category
+-- 	,WO.SSUBCAT SubCategory
+-- 	,WO.SSTATUS [Status]
+-- 	,WO.sReason Reason
+-- 	,WO.DTCALL CallDate
+-- 	,CASE WO.SSTATUS
+-- 		WHEN 'Canceled'
+-- 			THEN WO.DTCANC
+-- 		WHEN 'Work Completed'
+-- 			THEN WO.DTWCOMPL
+-- 		ELSE NULL
+-- 		END CloseDate
+-- 	,CASE WO.SSTATUS
+-- 		WHEN 'Call'
+-- 			THEN WO.DTCALL
+-- 		WHEN 'In Progress'
+-- 			THEN WO.DTINPROG
+-- 		WHEN 'Scheduled'
+-- 			THEN WO.DTSCHED
+-- 		WHEN 'Canceled'
+-- 			THEN WO.DTCANC
+-- 		WHEN 'Work Completed'
+-- 			THEN WO.DTWCOMPL
+-- 		ELSE HIST.DATE
+-- 		END StatusDate
+-- FROM MM2WO WO
+-- INNER JOIN PROPERTY P ON P.HMY = WO.HPROPERTY
+-- LEFT JOIN UNIT U ON U.HMY = WO.HUNIT
+-- LEFT JOIN VENDOR V ON V.HMYPERSON = WO.HVENDOR
+-- LEFT JOIN MMASSET A ON A.HMY = WO.HASSET
+-- LEFT JOIN (
+-- 	SELECT H.HWO HWO
+-- 		,H.SSTATUS [Status]
+-- 		,MAX(H.DTUSERMODIFIED) [Date]
+-- 	FROM WOHistory H
+-- 	GROUP BY H.hWO
+-- 		,H.sStatus
+-- 	) HIST ON HIST.hWO = WO.HMY
+-- 	AND HIST.STATUS = WO.SSTATUS
+-- WHERE WO.DTCALL >= convert(DATETIME, '05/01/2020', 101)
+-- 	AND WO.HPROPERTY IN (
+-- 		SELECT hProperty
+-- 		FROM listprop2
+-- 		WHERE hPropList IN (select hmy from property where scode = 'fortsam')
+-- 		)
+-- GO
+
+-- SELECT DISTINCT DET.HWO WorkOrderID
+-- 	,ISNULL(DET.HPERSON, 0) EmployeeID
+-- 	,CASE 
+-- 		WHEN ISNULL(PER.ULASTNAME, '') = ''
+-- 			THEN EMPL.SLASTNAME
+-- 		WHEN ISNULL(PER.SFIRSTNAME, '') = ''
+-- 			THEN PER.ULASTNAME
+-- 		ELSE PER.ULASTNAME + ', ' + SUBSTRING(PER.SFIRSTNAME, 1, 1)
+-- 		END EmployeeName
+-- FROM MM2WODET DET
+-- INNER JOIN (
+-- 	SELECT HMY
+-- 	FROM MM2WO
+-- 	WHERE DTCALL >= convert(DATETIME, '12/31/2007', 101)
+-- 		AND HPROPERTY IN (
+-- 			SELECT hProperty
+-- 			FROM listprop2
+-- 			WHERE hPropList IN (37)
+-- 			)
+-- 	) WO ON WO.HMY = DET.HWO
+-- INNER JOIN PREMPLOYEE EMPL ON EMPL.HMYPERSON = DET.HPERSON
+-- INNER JOIN PERSON PER ON PER.HMY = DET.HPERSON
+-- WHERE EMPL.bInactive = 0
+-- GO
+
+-- SELECT wo.hMy Id
+-- 	,wo.hProperty PropertyId
+-- 	,p.scode PropertyCode
+-- 	,u.scode UnitCode
+-- 	,wo.sPriority Priority
+-- 	,wo.sbriefdesc Description
+-- 	,a.subGroup1 SubGroup1
+-- 	,p.saddr1 + '(' + rtrim(p.scode) + ')' wogrp
+-- 	,p.scode ActualgrpCode
+-- 	,wo.dtcall CallDate
+-- 	,ISNULL(MIN(wod.dtActStart), wo.dtWCompl) AS ResponseDate
+-- 	,ISNULL(MAX(wod.dtActFinish), wo.dtWCompl) AS CompletionDate
+-- 	,SUM(CASE 
+-- 			WHEN wod.HPERSON > 0
+-- 				THEN wod.DQUAN
+-- 			ELSE 0
+-- 			END) TotalHours
+-- 	,SUM(CASE 
+-- 			WHEN wod.HPERSON > 0
+-- 				THEN wod.dTranPayAmt
+-- 			ELSE 0
+-- 			END) LaborAmount
+-- 	,SUM(CASE 
+-- 			WHEN ISNULL(wod.HPERSON, 0) = 0
+-- 				THEN wod.dTranPayAmt
+-- 			ELSE 0
+-- 			END) MaterialAmount
+-- 	,SUM(wod.dTranPayAmt) TotalAmount
+-- FROM mm2wo wo
+-- LEFT JOIN MM2WODET wod ON wod.hwo = wo.hmy
+-- INNER JOIN PROPERTY p ON (wo.hproperty = p.hmy)
+-- LEFT JOIN ATTRIBUTES a ON (a.HPROP = p.hmy)
+-- LEFT JOIN unit u ON (u.hmy = wo.hunit)
+-- INNER JOIN ListProp2 lp ON (p.hmy = lp.hProperty)
+-- INNER JOIN WOPerformanceStandard wps ON (
+-- 		lp.hPropList = wps.hProperty
+-- 		AND wo.SPRIORITY = wps.sPriority
+-- 		)
+-- WHERE 1 = 1
+-- 	AND wo.hproperty IN (
+-- 		SELECT lp.hProperty
+-- 		FROM property p1
+-- 		INNER JOIN listprop2 lp ON (p1.HMY = lp.hPropList)
+-- 		WHERE scode IN ('.resprop')
+-- 		)
+-- 	AND convert(DATETIME, convert(CHAR, wo.dtcall, 101), 101) >= convert(DATETIME, '01/01/2007', 101)
+-- 	AND convert(DATETIME, convert(CHAR, wo.dtcall, 101), 101) <= convert(DATETIME, '#dtCallTo#', 101)
+-- 	AND wo.sStatus = 'Work Completed'
+-- 	AND CONVERT(DATETIME, CONVERT(CHAR, wo.dtwcompl, 101), 101) >= convert(DATETIME, '01/01/2007', 101)
+-- 	AND CONVERT(DATETIME, CONVERT(CHAR, wo.dtwcompl, 101), 101) <= convert(DATETIME, '02/28/2007', 101)
+-- GROUP BY wo.hmy
+-- 	,wo.dtwcompl
+-- 	,wo.HPROPERTY
+-- 	,wo.DTCALL
+-- 	,p.SCODE
+-- 	,p.saddr1
+-- 	,u.SCODE
+-- 	,wo.SPRIORITY
+-- 	,wo.sbriefdesc
+-- 	,a.subgroup1
+-- 	,wo.dtWCompl
+-- 	,p.scode
+-- 	,p.saddr1
+
+-- SELECT wop.hmy ID
+-- 	,wpslp.hProperty PropertyId
+-- 	,wop.hProperty PropListId
+-- 	,wop.sPriority Priority
+-- 	,wop.iResponsePeriod ResponsePeriod
+-- 	,wop.iCompletionPeriod CompletionPeriod
+-- 	,wop.bCountWeekDayAfterHours CountWeekDayAfterHours
+-- 	,wop.bCountWeekEndHolidays CountWeekEndHolidays
+-- FROM listprop2 wpslp
+-- INNER JOIN WOPerformanceStandard wop ON wop.hProperty = wpslp.hPropList
+-- WHERE wpslp.hProperty = 30
+-- 	AND wop.sPriority = 'Emergency'

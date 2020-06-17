@@ -1,0 +1,108 @@
+//Notes
+	6/28/2016 JD: Created
+1/2/2018 JD: updated logging information for capturing report executions for audit in 2018
+	Select top 100 * from lmh_rpt_log order by runtime desc
+
+
+//End Notes
+//Database
+Crystal rs_lmh_wo_JBLM_Performance_summary.rpt
+//End Database
+
+//Crystal
+CryActive Y
+CryTree N
+Param start = #call1#
+Param end = #call2#
+Param Prop = #p.hmy#
+Param status = #wo.sstatus#
+
+
+
+
+
+//end Crystal 
+
+//Title
+Work Order Performance Summary
+Joint Base Lewis-McChord - Lewis-McChord Communities
+
+//end title
+  
+//version 
+1/2/2018 
+
+//select no crystal
+insert into lmh_rpt_log (rptname,huser,asofdate,runtime,notes) 
+	select 'JBLM Perf Summary',
+		'#@@username#',
+		getdate(),
+		getdate(), 
+		'rs_lmh_wo_jblm_performance_summary'
+//end select
+
+//Select 
+select 	datepart(month,w.dtcall) month,
+	datename(month, w.dtcall) Period,
+	sum(case when w.spriority = '01 - Emergency' then
+		case when lmh.response_goal = 0 then 1 else 0
+		end else 0 end) em_resp_g,
+
+	sum(case when w.spriority = '01 - Emergency' then
+		case when lmh.response_goal != 0 then 1 else 0
+		end else 0 end) em_resp_m,
+
+	sum(case when w.spriority = '02 - Urgent' then
+		case when lmh.response_goal = 0 then 1 else 0
+		end else 0 end) ur_resp_g,
+
+	sum(case when w.spriority = '02 - Urgent' then
+		case when lmh.response_goal != 0 then 1 else 0
+		end else 0 end) ur_resp_m,
+
+	sum(case when w.spriority = '03 - Routine' then
+		case when lmh.complete_goal = 0 then 1 else 0
+		end else 0 end) r_compl_g,
+
+	sum(case when w.spriority = '03 - Routine' then
+		case when lmh.complete_goal != 0 then 1 else 0
+		end else 0 end) r_compl_m
+
+from mm2wo w
+	inner join property p on p.hmy = w.hproperty
+	inner join lmhwodata lmh on lmh.hmy = w.hmy
+where 1=1
+and w.spriority in ('01 - Emergency','02 - Urgent','03 - Routine')
+#conditions#
+group by datepart(month,w.dtcall),datename(month, w.dtcall) 
+Order by 1
+//end select
+  
+//Columns
+//Type Name 1       2      3         4    	Show      Color   Formula Drill  Key   Width  Total
+T,	, 	, 	,   	, Month 	,N	, 	, 	,   	,  	,900	,
+T,      ,      	,       ,       , Month		,Y      ,       ,       ,    	,Y    	,600	,N
+T,      ,     	,       ,       , Priority	,Y      ,       ,       ,       ,     	,800	,N		
+T,      ,WO  	,Start	,Date/  , Time		,Y      ,       ,       ,    	,Y    	,600	,N
+T,      ,      	,       ,Completed,On Time?     ,Y      ,       ,       ,      	,     	,700  	,N  
+T,      ,      	,Complete,Date/	, Time 		,Y      ,       ,       ,      	,     	,900	,N
+T,      ,       ,       ,       , Unit	 	,Y      ,       ,       ,       ,     	,800	,N
+T,      ,     	,       ,       , Property	,Y      ,       ,       ,       ,     	,800	,N		
+T,      ,     	,Work	,Order	, #		,Y      ,       ,       ,25     ,     	,900	,N
+T,      ,     	,       ,Requester, Phone	,Y      ,       ,       ,       ,     	,1400  	,N  
+T,      ,     	,       ,       , Requester	,Y      ,       ,       ,       ,     	,1400  	,N  
+T,      ,       ,       ,Response, On Time?	,Y      ,       ,       ,       ,     	,1400  	,N  
+T,      ,Work	,Start	,Date/	, Time		,Y      ,       ,       ,       ,     	,1400  	,N  
+T,      ,     	,       ,Reason , On Hold	,Y      ,       ,       ,       ,     	,1400  	,N  
+T,      ,    	,       ,Service, Issue		,Y      ,       ,       ,       ,     	,400  	,N  
+T,      ,      	,       ,Service, Comments	,Y      ,       ,       ,       ,     	,400  	,N  
+T,      ,    	,       ,Technician, Notes	,Y      ,       ,       ,       ,       ,700  	,N  
+//End Column
+  
+//Filter
+//Type, DataTyp,   	Name,        	Caption,     		Key,   List	,Val1										,Val2	,Mandatory	,Multi-Type	,Title  Title
+C,           T,     	p.hMy,      	*Property		,	,61	,p.hMy = #p.hMy#								,     	,     		, 		,y,
+M,           T, 	wo.sStatus , 	Status  		,    	,select sdesc from mm2woStatus,w.sStatus='#wo.sStatus#'				,       ,      		,         	,y,  
+R,           A,      	call1:call2,	Call Dates		, 	,   	,w.dtCall between '#call1#' and '#call2#'+1					,       ,Y   		,         	,y,
+R,           A,    	comp1:comp2, 	Completion Dates	, 	,    	,w.dtWcompl between '#comp1#' and '#comp2#'+1					,    	,      		,         	,y,              
+//end filter

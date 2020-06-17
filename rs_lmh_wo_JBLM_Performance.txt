@@ -1,0 +1,112 @@
+//Notes
+	6/28/2016 JD: Created
+1/2/2018 JD: updated logging information for capturing report executions for audit in 2018
+	Select top 100 * from lmh_rpt_log order by runtime desc
+02/28/2019 JD: added category and subcategory
+
+
+//End Notes
+//Database
+//End Database 
+
+//Title
+Work Order Performance Detail
+Joint Base Lewis-McChord - Lewis-McChord Communities
+//end title
+  
+//VERSION 
+02/28/2019
+
+
+//select no crystal
+insert into lmh_rpt_log (rptname,huser,asofdate,runtime,notes) 
+	select 'JBLM WO Performance Detail',
+		'#@@username#',
+		getdate(),
+		getdate(), 
+		'rs_lmh_wo_jblm_performance'
+//end select
+
+//Select 
+select datepart(month,w.dtcall) #Month, 
+	datename(month, w.dtcall) Period, 
+	w.spriority Priority,
+	w.scategory Category,
+	w.ssubcat subcategory,
+	w.dtcall dtstart,
+	case when lmh.complete_goal = 0 then 'Yes' 
+		 when lmh.pending_reason not like 'Qualified%' then 'Yes'  
+		else 'No' end,
+	w.dtwcompl dtcompl,
+	u.scode uscode,
+	p.scode pscode,
+	w.hmy wonum,
+	w.sphone phone,
+	w.scallername caller,
+	case lmh.response_goal when 0 then 'Yes' else 'No' end respgoal,
+	min(d.dtactstart) workstart,
+	case when lmh.pending_reason like 'Qualified%' then '' else lmh.pending_reason end,
+	w.sbriefdesc issue,
+	w.sfulldesc,
+	w.stechnotes
+from mm2wo w
+	left outer join mm2wodet d on d.hwo = w.hmy
+	inner join property p on p.hmy = w.hproperty
+	left outer join unit u on u.hmy = w.hunit
+	inner join lmhwodata lmh on lmh.hmy = w.hmy
+where 1=1
+and w.spriority in ('01 - Emergency','02 - Urgent','03 - Routine')
+#conditions#
+group by datepart(month,w.dtcall) , 
+	datename(month, w.dtcall) , 
+	w.spriority ,
+	w.scategory,
+	w.ssubcat,
+	w.dtcall ,
+	case when lmh.complete_goal = 0 then 'Yes' 
+		 when lmh.pending_reason not like 'Qualified%' then 'Yes'  
+		else 'No' end,
+	w.dtwcompl ,
+	u.scode ,
+	p.scode,
+	w.hmy ,
+	w.sphone,
+	w.scallername ,
+	case lmh.response_goal when 0 then 'Yes' else 'No' end ,
+	case when lmh.pending_reason like 'Qualified%' then '' else lmh.pending_reason end,
+	w.sbriefdesc ,
+	w.sfulldesc,
+	w.stechnotes
+Order by 1,2,4
+//end select
+  
+//Columns
+//Type Name 1       2      3         4    	Show      Color   Formula Drill  Key   Width  Total
+T,	, 	, 	,   	, Month 	,N	, 	, 	,   	,  	,900	,
+T,      ,      	,       ,       , Month		,Y      ,       ,       ,    	,Y    	,600	,N
+T,      ,     	,       ,       , Priority	,Y      ,       ,       ,       ,     	,800	,N		
+T,      ,     	,       ,       , Category	,Y      ,       ,       ,       ,     	,800	,N		
+T,      ,     	,       ,       , Sub-Category	,Y      ,       ,       ,       ,     	,800	,N		
+T,      ,WO  	,Start	,Date/  , Time		,Y      ,       ,       ,    	,Y    	,600	,N
+T,      ,      	,Met,Goal,Requirements?     ,Y      ,       ,       ,      	,     	,700  	,N  
+T,      ,      	,Complete,Date/	, Time 		,Y      ,       ,       ,      	,     	,900	,N
+T,      ,       ,       ,       , Unit	 	,Y      ,       ,       ,       ,     	,800	,N
+T,      ,     	,       ,       , Property	,Y      ,       ,       ,       ,     	,800	,N		
+T,      ,     	,Work	,Order	, #		,Y      ,       ,       ,25     ,     	,900	,N
+T,      ,     	,       ,Requester, Phone	,Y      ,       ,       ,       ,     	,1400  	,N  
+T,      ,     	,       ,       , Requester	,Y      ,       ,       ,       ,     	,1400  	,N  
+T,      ,       ,       ,Response, On Time?	,Y      ,       ,       ,       ,     	,1400  	,N  
+T,      ,Work	,Start	,Date/	, Time		,Y      ,       ,       ,       ,     	,1400  	,N  
+T,      ,     	,       ,Reason , On Hold	,Y      ,       ,       ,       ,     	,1400  	,N  
+T,      ,    	,       ,Service, Issue		,Y      ,       ,       ,       ,     	,400  	,N  
+T,      ,      	,       ,Service, Comments	,Y      ,       ,       ,       ,     	,400  	,N  
+T,      ,    	,       ,Technician, Notes	,Y      ,       ,       ,       ,       ,700  	,N  
+//End Column
+  
+//Filter
+//Type, DataTyp,   	Name,        	Caption,     		Key,   List	,Val1										,Val2	,Mandatory	,Multi-Type	,Title  Title
+C,           T,     	p.hMy,      	*Property		,	,61	,p.hMy = #p.hMy#								,     	,     		, 		,y,
+M,           T, 	wo.sStatus , 	Status  		,    	,select sdesc from mm2woStatus,w.sStatus='#wo.sStatus#'				,       ,      		,         	,y,  
+R,           A,      	call1:call2,	Call Dates		, 	,   	,w.dtCall between '#call1#' and '#call2#'+1					,       ,Y   		,         	,y,
+R,           A,    	comp1:comp2, 	Completion Dates	, 	,    	,w.dtWcompl between '#comp1#' and '#comp2#'+1					,    	,      		,         	,y,              
+//end filter
