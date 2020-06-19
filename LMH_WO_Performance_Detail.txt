@@ -122,7 +122,6 @@ ORDER BY wonum
 //END SELECT 
 
 //SELECT Detail
-
 WITH CTE
 AS (
 	SELECT CASE 
@@ -137,7 +136,8 @@ AS (
 	FROM [#@@GUID#TempLMH_WOPerf]
 	WHERE historystatus = 'First Contact'
 	)
-SELECT rownum
+SELECT KeyColumn
+	,rownum
 	,CONVERT(VARCHAR, wonum) wonum
 	,PropCode
 	,HistoryStatus
@@ -170,37 +170,53 @@ SELECT rownum
 		ELSE NULL
 		END AS 'pendingReason'
 	,CASE 
+		/*******************************************************************/
+		/* EMERGENCY */
+		/*******************************************************************/
 		WHEN [Priority] LIKE '%Emergency%'
 			AND (
 				(
+					/* When call comes on a weekend */
 					DayOfCall = 'Saturday'
 					OR DayOfCall = 'Sunday'
 					)
 				OR (
 					(
-						DATEPART(HOUR, dtcall) BETWEEN 19
-							AND 23
-						OR DATEPART(HOUR, dtcall) BETWEEN 0
-							AND 7
+						/* Or when the call comes in outside of office hours */
+						/* so if the call time is between 5:01 PM to 12 AM */
+						(
+							DATEPART(HOUR, dtcall) >= 17
+							AND DATEPART(MINUTE, dtcall) <> 0
+							)
+						OR (
+							DATEPART(HOUR, dtcall) >= 0 /* or the call time is between 1 AM to 7:59 AM */
+							AND DATEPART(HOUR, dtcall) <= 7
+							)
 						)
 					)
 				)
+			/* If we get here, either the call came in on a weekend or after office hours, so was first contact before or after 1 hour */
 			AND DATEDIFF(MINUTE, dtcall, HistoryDate) <= 60
 			THEN 'Yes'
+		/*Lastly, if we get here, they only have 30 minutes to respond */
 		WHEN [Priority] LIKE '%Emergency%'
 			AND DATEDIFF(MINUTE, dtcall, HistoryDate) <= 30
 			THEN 'Yes'
+				/*******************************************************************/
+				/* ROUTINE */
+				/*******************************************************************/
 		ELSE CASE 
 				WHEN [Priority] LIKE '%Routine%'
-					
 					AND (
-						(/* Completed in less than 24 hours or before end of next business day */
-							DATEADD(DAY, 1, dtcall) <= CompletionDate
-							OR DATEDIFF(HOUR, dtcall, CompletionDate) <= 24
-							)
-						AND (/* Contacted in less than 24 hours OR before end of business next day */
-							DATEADD(DAY, 1, dtcall) <= HistoryDate
+						/* Contacted in less than 24 hours OR before end of business next day */
+						(
+							DATEADD(DAY, 1, DATEADD(day, DATEDIFF(day, 0, dtcall, '5:00 PM'))) <= HistoryDate
 							OR DATEDIFF(HOUR, dtcall, HistoryDate) <= 24
+							)
+						AND (
+							/* Completed in less than 24 hours or before end of next business day */
+							DATEADD(DAY, 1, DATEADD(day, DATEDIFF(day, 0, dtcall, '5:00 PM'))) <= CompletionDate
+							OR DATEDIFF(HOUR, dtcall, CompletionDate) <= 24
 							)
 						)
 					THEN 'Yes'
@@ -219,4 +235,4 @@ ORDER BY wonum
 IF OBJECT_ID('[#@@GUID#TempLMH_WOPerf]') IS NOT NULL
 	DROP TABLE [#@@GUID#TempLMH_WOPerf]
 
-//END SELECT 
+//END SELECT
