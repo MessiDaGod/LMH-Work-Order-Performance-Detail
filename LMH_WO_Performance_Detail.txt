@@ -1,3 +1,10 @@
+//SELECT NO CRYSTAL
+
+IF OBJECT_ID('[#@@USERNAME#_TempLMH_WOPerf]') IS NOT NULL
+	DROP TABLE [#@@USERNAME#_TempLMH_WOPerf]
+
+//END SELECT
+
 //SELECT NO CRYSTAL 
 SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
 
@@ -112,7 +119,7 @@ AS (
 		,DATENAME(MONTH, wo.dtcall)
 	)
 SELECT *
-INTO [#@@GUID#TempLMH_WOPerf]
+INTO [#@@USERNAME#_TempLMH_WOPerf]
 FROM CTE
 ORDER BY wonum
 	,rownum
@@ -133,7 +140,7 @@ AS (
 			ELSE 0
 			END orderby
 		,*
-	FROM [#@@GUID#TempLMH_WOPerf]
+	FROM [#@@USERNAME#_TempLMH_WOPerf]
 	WHERE historystatus = 'First Contact'
 	)
 SELECT KeyColumn
@@ -227,12 +234,5 @@ FROM CTE
 WHERE orderby = 1
 ORDER BY wonum
 	,rownum
-
-//END SELECT
-
-//SELECT NO CRYSTAL AFTER
-
-IF OBJECT_ID('[#@@GUID#TempLMH_WOPerf]') IS NOT NULL
-	DROP TABLE [#@@GUID#TempLMH_WOPerf]
 
 //END SELECT
