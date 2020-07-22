@@ -124,8 +124,6 @@ FROM CTE
 ORDER BY wonum
 	,rownum
 
-/*WHERE STATUS IN ('Pending / Vendor','Pending / Parts', 'Pending / Appointment', 'Pending / Continuous Work')*/
-
 //END SELECT 
 
 //SELECT Detail
@@ -148,11 +146,11 @@ SELECT KeyColumn
 	,CONVERT(VARCHAR, wonum) wonum
 	,PropCode
 	,HistoryStatus
-	,FORMAT(dtCall, 'M/dd/yyyy hh:mm tt') AS 'dtCall'
-	,FORMAT(HistoryDate, 'M/dd/yyyy hh:mm tt') AS 'HistoryDate'
-	,FORMAT(workstart, 'M/dd/yyyy hh:mm tt') AS 'workstart'
-	,FORMAT(ResponseDate, 'M/dd/yyyy hh:mm tt') AS 'ResponseDate'
-	,FORMAT(CompletionDate, 'M/dd/yyyy hh:mm tt') AS 'CompletionDate'
+	,FORMAT(dtCall, 'M/dd/yyyy hh:mm tt') AS dtCall
+	,FORMAT(HistoryDate, 'M/dd/yyyy hh:mm tt') AS HistoryDate
+	,FORMAT(workstart, 'M/dd/yyyy hh:mm tt') AS workstart
+	,FORMAT(ResponseDate, 'M/dd/yyyy hh:mm tt') AS ResponseDate
+	,FORMAT(CompletionDate, 'M/dd/yyyy hh:mm tt') AS CompletionDate
 	,DayOfCall
 	,Priority
 	,[STATUS]
@@ -217,12 +215,12 @@ SELECT KeyColumn
 					AND (
 						/* Contacted in less than 24 hours OR before end of business next day */
 						(
-							DATEADD(DAY, 1, DATEADD(day, DATEDIFF(day, 0, dtcall, '5:00 PM'))) <= HistoryDate
+							DATEADD(DAY, 1, DATEADD(day, DATEDIFF(day, 0, dtcall), '5:00 PM')) <= HistoryDate
 							OR DATEDIFF(HOUR, dtcall, HistoryDate) <= 24
 							)
 						AND (
 							/* Completed in less than 24 hours or before end of next business day */
-							DATEADD(DAY, 1, DATEADD(day, DATEDIFF(day, 0, dtcall, '5:00 PM'))) <= CompletionDate
+							DATEADD(DAY, 1, DATEADD(day, DATEDIFF(day, 0, dtcall), '5:00 PM')) <= CompletionDate
 							OR DATEDIFF(HOUR, dtcall, CompletionDate) <= 24
 							)
 						)
