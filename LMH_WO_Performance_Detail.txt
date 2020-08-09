@@ -83,7 +83,8 @@ AS (
 	WHERE (
 			wo.SPRIORITY LIKE '%Emergency%'
 			OR wo.SPRIORITY LIKE '%Routine%'
-			) #CONDITIONS#
+			)
+		AND wo.sStatus NOT LIKE '%Cancel%' #CONDITIONS#
 	GROUP BY ISNULL(wo.sPriority, '')
 		,CASE 
 			WHEN ISNULL(RTRIM(wo.sStatus), 'NONE') IN (
